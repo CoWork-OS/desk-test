@@ -124,8 +124,9 @@ const OLD_CLI =
   "This CoWork version does not pin --model for cowork run, so the run used the global model. Update CoWork OS (cowork run --provider/--model needs a release after 0.5.61).";
 
 /**
- * A two-minute run that uses no tools. A task that can't get its access profile pauses instead of
- * failing, so without this a missing profile would stall every job until its timeout.
+ * A short run that saves one file. It catches a missing access profile (the task pauses instead of
+ * failing, which would stall every job until its timeout) and a read-only one (every job would
+ * fail to save its output) before any job runs.
  */
 async function preflight(options, modelDir) {
   const dir = path.join(modelDir, "preflight");
@@ -133,7 +134,7 @@ async function preflight(options, modelDir) {
   await fs.mkdir(dir, { recursive: true });
   const { command, args } = coworkCommand(options, [
     "run",
-    "Reply with the single word READY. Do not use any tools.",
+    "Create a file named preflight.txt in this folder containing the single word READY.",
     "--force",
     "--cwd",
     dir,
@@ -148,9 +149,9 @@ async function preflight(options, modelDir) {
     "--json",
     "--exit-on-input",
     "--timeout-ms",
-    "120000",
+    "270000",
   ]);
-  const result = await runProcess(command, args, { timeoutMs: 150_000 });
+  const result = await runProcess(command, args, { timeoutMs: 300_000 });
   const events = jsonLines(result.stdout);
   if (!events.some((event) => event.type === "task_created")) {
     const detail = (result.stderr || result.stdout).trim().split("\n").slice(-3).join("\n");
@@ -159,7 +160,25 @@ async function preflight(options, modelDir) {
   if (!events.some((event) => event.type === "task_model")) throw new Error(OLD_CLI);
   if (result.code !== 0) {
     throw new Error(
-      `Preflight did not finish (${result.code === null ? "stopped after 150 s" : `exit ${result.code}`}). Check that the "${options.accessProfile}" access profile exists in CoWork (README: Set up) and that ${options.provider}/${options.model} answers in CoWork.`,
+      `Preflight did not finish (${result.code === null ? "stopped after 300 s" : `exit ${result.code}`}). Check that the "${options.accessProfile}" access profile exists in CoWork (README: Set up) and that ${options.provider}/${options.model} answers in CoWork.`,
+    );
+  }
+  // Every job saves a file, so the profile must allow writing in the run's folder.
+  if (!(await fs.readFile(path.join(dir, "preflight.txt"), "utf8").catch(() => null))) {
+    const taskId = events.find((event) => event.type === "task_created")?.task?.id;
+    let refusal = "";
+    if (taskId) {
+      const tail = coworkCommand(options, ["tail", taskId, "--limit", "2000", "--json"]);
+      const tailResult = await runProcess(tail.command, tail.args, { timeoutMs: 120_000 });
+      try {
+        const blocked = buildReceipt(parseTail(tailResult.stdout)).blocked;
+        if (blocked.length) refusal = ` CoWork refused: ${blocked[0].message}`;
+      } catch {
+        // No receipt; the generic message below still applies.
+      }
+    }
+    throw new Error(
+      `Preflight could not save a file.${refusal} The "${options.accessProfile}" access profile needs Sandbox set to Workspace write (README: Set up).`,
     );
   }
 }

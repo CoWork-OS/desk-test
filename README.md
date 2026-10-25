@@ -49,7 +49,7 @@ In CoWork, open **Settings → System & Security → Permissions** and add a cus
 | Reviewer | `none` |
 | Network | `disabled` |
 
-Before the jobs start, the runner does a two-minute preflight run. If the profile is missing, the preflight fails and says so.
+Before the jobs start, the runner does a short preflight run that saves one file. If the profile is missing, or doesn't allow writing files, the preflight fails and says so.
 
 ### 3. Run
 

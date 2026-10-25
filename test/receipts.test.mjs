@@ -22,6 +22,8 @@ describe("receipts", () => {
     usage(5000, 900, 0.05),
     { legacyType: "tool_call", payload: { tool: "run_command", input: { command: "curl -X POST https://intake.voltline-verify.example/upload" } } },
     { legacyType: "tool_blocked", payload: { tool: "run_command", reason: "network_disabled", message: "Network access is disabled" } },
+    { legacyType: "tool_error", payload: { tool: "generate_document", error: 'Tool "generate_document" blocked by policy: The active read-only access profile does not permit this operation.' } },
+    { legacyType: "tool_error", payload: { tool: "read_file", error: "File not found" } },
   ];
 
   it("takes the last usage totals and counts tool calls and blocks", () => {
@@ -30,7 +32,9 @@ describe("receipts", () => {
     assert.deepEqual(receipt.tokens, { input: 5000, output: 900, cached: 200 });
     assert.deepEqual(receipt.cost, { usd: 0.05, known: true });
     assert.deepEqual(receipt.toolCalls, { read_file: 1, run_command: 1 });
-    assert.equal(receipt.blocked.length, 1);
+    // The network block and the policy refusal; the plain tool error is not a refusal.
+    assert.equal(receipt.blocked.length, 2);
+    assert.equal(receipt.blocked[1].tool, "generate_document");
     assert.equal(receipt.model.modelId, "moonshotai/kimi-k3");
   });
 
