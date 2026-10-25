@@ -23,7 +23,7 @@ All companies, people, places and web pages in the inputs are fictional. [METHOD
 You need:
 
 - **CoWork OS** with `cowork run --provider/--model` (any release after 0.5.61, or a build of `main`). Older versions ignore `--model`; the runner stops with a message if that happens.
-- **Node.js 20 or newer.**
+- **Node.js 22.13 or newer.**
 - **The model you want to test**, set up in CoWork (for example an OpenRouter key, or Ollama for a local model).
 
 ### 1. Install
