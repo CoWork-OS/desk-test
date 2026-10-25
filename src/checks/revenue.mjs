@@ -4,7 +4,7 @@
 import path from "node:path";
 import ExcelJS from "exceljs";
 import FormulaParser from "fast-formula-parser";
-import { exists, item, missingOutput, summarize, withinTolerance } from "./common.mjs";
+import { item, locateOutput, missingOutput, placementItem, summarize, withinTolerance } from "./common.mjs";
 import { BASE_INPUTS, PERTURBATION, referenceYearTotals } from "./revenue-reference.mjs";
 
 const norm = (text) => String(text ?? "").trim().toLowerCase().replace(/\s+/g, " ");
@@ -119,8 +119,9 @@ function evaluator({ cells, bounds }, overrides = new Map()) {
 }
 
 export async function checkRevenue({ workspace, job }) {
-  const file = path.join(workspace, job.output);
-  if (!(await exists(file))) return missingOutput(job.output);
+  const located = await locateOutput(workspace, job.output);
+  if (!located) return missingOutput(job.output);
+  const { file } = located;
   const tolerance = { relativeTolerance: job.key.relativeTolerance ?? 0.01 };
 
   const workbook = new ExcelJS.Workbook();
@@ -199,6 +200,7 @@ export async function checkRevenue({ workspace, job }) {
       item("Yearly totals within 1% of the reference", matches(totals, reference), `${fmt(totals)} vs ${fmt(reference)}${usedSaved ? " (saved values)" : ""}`),
       item("Totals follow changed inputs", !usedSaved && overrides.size === Object.keys(PERTURBATION).length && matches(changedTotals, perturbedReference), usedSaved ? `could not recalculate: ${evaluationError || "no numeric result"}` : `${fmt(changedTotals)} vs ${fmt(perturbedReference)}`),
       item("Typed-in numbers on the Model sheet (for review)", hardCoded === 0, `${hardCoded} cells`, { required: false }),
+      placementItem(located, workspace),
     ],
     {
       yearTotals: totals.map((value) => (Number.isFinite(value) ? Math.round(value) : null)),

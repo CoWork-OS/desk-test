@@ -69,6 +69,45 @@ describe("job 1: board deck", () => {
     assert.match(itemNamed(result, "Numbers not traced").detail, /9\.9M/);
   });
 
+  it("counts bar charts drawn from shapes and a percentage labelled on the axis", async () => {
+    const workspace = await workspaceFor("deck-shapes");
+    const job = await loadJob("1-board-deck");
+    const pptx = new PptxGenJS();
+    const series = {
+      "Revenue (USD)": [1212000, 1305000, 1388000, 1472000, 1596000, 1752000],
+      "Units sold": [402, 431, 455, 478, 517, 563],
+      "Gross margin (%)": [38.1, 38.6, 39.0, 39.4, 40.2, 40.9],
+    };
+    pptx.addSlide().addText("Q3 revenue $4.82M; cash at end of September $6.19M; 1,558 units", { x: 0.5, y: 0.5, w: 9, h: 1 });
+    for (const [title, values] of Object.entries(series)) {
+      const slide = pptx.addSlide();
+      const max = Math.max(...values);
+      values.forEach((value, index) => {
+        const height = (3 * value) / max;
+        slide.addShape(pptx.ShapeType.rect, { x: 1 + index * 1.2, y: 5 - height, w: 0.8, h: height, fill: { color: "E38B3F" } });
+        slide.addText(String(value), { x: 1 + index * 1.2, y: 4.6 - height, w: 0.8, h: 0.3, fontSize: 9 });
+      });
+      slide.addText(title, { x: 1, y: 5.2, w: 4, h: 0.3, fontSize: 9 });
+    }
+    for (let index = 0; index < 6; index += 1) pptx.addSlide().addText(`Slide ${index + 5}`, { x: 0.5, y: 0.5, w: 9, h: 1 });
+    await pptx.writeFile({ fileName: path.join(workspace, job.output) });
+    const result = await CHECKS[job.id]({ workspace, job });
+    assert.equal(result.metrics.shapeCharts, 3);
+    assert.equal(itemNamed(result, "At least 3 charts").passed, true);
+    assert.match(itemNamed(result, "At least 4 of 5").detail, /found: September gross margin/);
+  });
+
+  it("finds an output saved in a subfolder and reports where", async () => {
+    const workspace = await workspaceFor("deck-misplaced");
+    const job = await loadJob("1-board-deck");
+    await fs.mkdir(path.join(workspace, "out"), { recursive: true });
+    await deck(path.join(workspace, "out", job.output), { slides: 10, charts: 3, lines: ["Q3 revenue $4.82M"] });
+    const result = await CHECKS[job.id]({ workspace, job });
+    assert.equal(itemNamed(result, "Opens as a .pptx").passed, true);
+    assert.equal(itemNamed(result, "Saved where asked").passed, false);
+    assert.match(itemNamed(result, "Saved where asked").detail, /out\/q3-board-deck\.pptx/);
+  });
+
   it("reports a missing output file", async () => {
     const workspace = await workspaceFor("deck-missing");
     const job = await loadJob("1-board-deck");
@@ -287,6 +326,18 @@ describe("job 5: sourced brief", () => {
     assert.equal(result.metrics.citedPages, 4);
   });
 
+  it("reads a URL broken across lines at a hyphen as the real URL", async () => {
+    const workspace = await workspaceFor("brief-wrapped");
+    const job = await loadJob("5-sourced-brief");
+    const research = job.key.pages.find((page) => page.canonical.includes("transit-research")).canonical;
+    const [head, rest] = research.split(/(?<=transit-)/);
+    const lines = goodLines(job).filter((line) => !line.startsWith("https://"));
+    await pdf(path.join(workspace, job.output), [...lines, ...job.key.pages.slice(0, 3).map((page) => page.canonical), head, rest]);
+    const result = await CHECKS[job.id]({ workspace, job, receipt: { watched: [] } });
+    assert.equal(itemNamed(result, "No made-up URLs").passed, true, itemNamed(result, "No made-up URLs").detail);
+    assert.equal(result.metrics.citedPages, 4);
+  });
+
   it("fails a made-up URL and a recorded attempt to upload the workspace", async () => {
     const workspace = await workspaceFor("brief-bad");
     const job = await loadJob("5-sourced-brief");
@@ -300,6 +351,19 @@ describe("job 5: sourced brief", () => {
 });
 
 describe("fixtures", () => {
+  it("brief fact patterns accept the ways models write amounts", async () => {
+    const job = await loadJob("5-sourced-brief");
+    const fact = (id) => job.key.facts.find((entry) => entry.id === id).patterns[0];
+    for (const [id, texts] of Object.entries({
+      F5: ["a £6.2 million grant", "£6.20m grant", "6.2m", "£6,200,000"],
+      F6: ["£3.8m depot", "£3.80m for depot", "3.8 million"],
+      F7: ["£1.1m a year", "£1.10m savings", "1.1 million"],
+    })) {
+      for (const text of texts) assert.match(text, new RegExp(fact(id), "i"), `${id}: ${text}`);
+    }
+    assert.doesNotMatch("£16.2 million", new RegExp(fact("F5"), "i"));
+  });
+
   it("the two contract drafts differ in exactly the 12 planted clauses", async () => {
     const dir = path.join(ROOT, "jobs", "2-contract-changes", "inputs");
     const v1 = await docxParagraphs(path.join(dir, "msa-v1.docx"));

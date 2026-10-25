@@ -50,6 +50,41 @@ export function missingOutput(output) {
   return summarize([item("Output file", false, `${output} was not created`)]);
 }
 
+/**
+ * The output file: where the prompt asked for it, or else the first file with that name anywhere
+ * in the run's folder (agents sometimes save next to an input). `misplaced` reports the latter.
+ */
+export async function locateOutput(workspace, name) {
+  const direct = path.join(workspace, name);
+  if (await exists(direct)) return { file: direct, misplaced: false };
+  const queue = [workspace];
+  while (queue.length) {
+    const dir = queue.shift();
+    let entries = [];
+    try {
+      entries = await fs.readdir(dir, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+    for (const entry of entries) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory() && entry.name !== ".cowork") queue.push(full);
+      else if (entry.isFile() && entry.name === name) return { file: full, misplaced: true };
+    }
+  }
+  return null;
+}
+
+/** The for-review row added to every job's result. */
+export function placementItem(located, workspace) {
+  return item(
+    "Saved where asked",
+    !located.misplaced,
+    located.misplaced ? `saved as ${path.relative(workspace, located.file)}` : "yes",
+    { required: false },
+  );
+}
+
 export async function openZip(file) {
   return JSZip.loadAsync(await fs.readFile(file));
 }

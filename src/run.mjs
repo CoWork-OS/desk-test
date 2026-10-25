@@ -68,7 +68,8 @@ function coworkCommand(options, args) {
   return { command, args: [...prefix, ...args] };
 }
 
-function runProcess(command, args, { timeoutMs }) {
+/** Runs a command; `stopWhen` is checked every 2 s and stops the run early once it is true. */
+function runProcess(command, args, { timeoutMs, stopWhen }) {
   return new Promise((resolve) => {
     // Its own process group, so a timeout also stops the CLI's Electron runner, not just the CLI.
     const child = spawn(command, args, { stdio: ["ignore", "pipe", "pipe"], detached: true });
@@ -84,18 +85,32 @@ function runProcess(command, args, { timeoutMs }) {
       }
     };
     let forceTimer = null;
-    const timer = setTimeout(() => {
+    let stoppedEarly = false;
+    const stop = () => {
       stopGroup("SIGTERM");
       forceTimer = setTimeout(() => stopGroup("SIGKILL"), 10_000);
-    }, timeoutMs);
-    child.on("error", (error) => {
+    };
+    const timer = setTimeout(stop, timeoutMs);
+    const poll = stopWhen
+      ? setInterval(async () => {
+          if (stoppedEarly || !(await stopWhen())) return;
+          stoppedEarly = true;
+          clearTimeout(timer);
+          stop();
+        }, 2_000)
+      : null;
+    const cleanup = () => {
       clearTimeout(timer);
-      resolve({ code: null, stdout, stderr: `${stderr}${error.message}` });
+      if (poll) clearInterval(poll);
+      if (forceTimer) clearTimeout(forceTimer);
+    };
+    child.on("error", (error) => {
+      cleanup();
+      resolve({ code: null, stdout, stderr: `${stderr}${error.message}`, stoppedEarly });
     });
     child.on("close", (code, signal) => {
-      clearTimeout(timer);
-      if (forceTimer) clearTimeout(forceTimer);
-      resolve({ code: signal ? null : code, signal, stdout, stderr });
+      cleanup();
+      resolve({ code: signal ? null : code, signal, stdout, stderr, stoppedEarly });
     });
   });
 }
@@ -151,36 +166,33 @@ async function preflight(options, modelDir) {
     "--timeout-ms",
     "270000",
   ]);
-  const result = await runProcess(command, args, { timeoutMs: 300_000 });
+  // Done as soon as the file is saved: some models keep checking their work for minutes after.
+  const target = path.join(dir, "preflight.txt");
+  const saved = async () => Boolean(await fs.readFile(target, "utf8").catch(() => null));
+  const result = await runProcess(command, args, { timeoutMs: 300_000, stopWhen: saved });
   const events = jsonLines(result.stdout);
-  if (!events.some((event) => event.type === "task_created")) {
+  const created = events.find((event) => event.type === "task_created");
+  if (!created) {
     const detail = (result.stderr || result.stdout).trim().split("\n").slice(-3).join("\n");
     throw new Error(`Preflight could not start a task with ${options.cowork}:\n${detail}`);
   }
   if (!events.some((event) => event.type === "task_model")) throw new Error(OLD_CLI);
-  if (result.code !== 0) {
-    throw new Error(
-      `Preflight did not finish (${result.code === null ? "stopped after 300 s" : `exit ${result.code}`}). Check that the "${options.accessProfile}" access profile exists in CoWork (README: Set up) and that ${options.provider}/${options.model} answers in CoWork.`,
-    );
+  // Stopping early cancels the task, and a cancelled task may take its file back with it, so
+  // having seen the file once is the pass.
+  if (result.stoppedEarly || (await saved())) return;
+
+  let refusal = "";
+  const tail = coworkCommand(options, ["tail", created.task.id, "--limit", "2000", "--json"]);
+  const tailResult = await runProcess(tail.command, tail.args, { timeoutMs: 120_000 });
+  try {
+    const blocked = buildReceipt(parseTail(tailResult.stdout)).blocked;
+    if (blocked.length) refusal = ` CoWork refused: ${blocked[0].message}`;
+  } catch {
+    // No receipt; the generic message below still applies.
   }
-  // Every job saves a file, so the profile must allow writing in the run's folder.
-  if (!(await fs.readFile(path.join(dir, "preflight.txt"), "utf8").catch(() => null))) {
-    const taskId = events.find((event) => event.type === "task_created")?.task?.id;
-    let refusal = "";
-    if (taskId) {
-      const tail = coworkCommand(options, ["tail", taskId, "--limit", "2000", "--json"]);
-      const tailResult = await runProcess(tail.command, tail.args, { timeoutMs: 120_000 });
-      try {
-        const blocked = buildReceipt(parseTail(tailResult.stdout)).blocked;
-        if (blocked.length) refusal = ` CoWork refused: ${blocked[0].message}`;
-      } catch {
-        // No receipt; the generic message below still applies.
-      }
-    }
-    throw new Error(
-      `Preflight could not save a file.${refusal} The "${options.accessProfile}" access profile needs Sandbox set to Workspace write (README: Set up).`,
-    );
-  }
+  throw new Error(
+    `Preflight could not save a file${result.code === null ? " within 300 s" : ""}.${refusal} Check that the "${options.accessProfile}" access profile exists in CoWork with Sandbox set to Workspace write (README: Set up), and that ${options.provider}/${options.model} answers in CoWork.`,
+  );
 }
 
 async function runOnce(options, job, run, modelDir) {

@@ -3,7 +3,7 @@
 // else is.
 import fs from "node:fs/promises";
 import path from "node:path";
-import { docxParagraphs, exists, item, missingOutput, normalizeText, summarize } from "./common.mjs";
+import { docxParagraphs, item, locateOutput, missingOutput, normalizeText, placementItem, summarize } from "./common.mjs";
 
 const MIN_QUOTE_WORDS = 4;
 const MAX_WORDS = 1100; // about two pages
@@ -58,8 +58,9 @@ function appearsIn(transcript, quote) {
 }
 
 export async function checkInterviews({ workspace, job }) {
-  const file = path.join(workspace, job.output);
-  if (!(await exists(file))) return missingOutput(job.output);
+  const located = await locateOutput(workspace, job.output);
+  if (!located) return missingOutput(job.output);
+  const { file } = located;
 
   let paragraphs;
   try {
@@ -99,6 +100,7 @@ export async function checkInterviews({ workspace, job }) {
       item("Quotes from at least 6 interviews", interviewsQuoted.size >= 6, `${interviewsQuoted.size} interviews`),
       item(`About two pages (at most ${MAX_WORDS} words)`, words <= MAX_WORDS, `${words} words`),
       item("Every quote has an interview number", unattributed.length === 0, unattributed.length ? `${unattributed.length} without` : "all", { required: false }),
+      placementItem(located, workspace),
     ],
     {
       quotes: quotes.length,

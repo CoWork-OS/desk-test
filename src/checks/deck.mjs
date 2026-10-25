@@ -3,10 +3,11 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import {
-  exists,
   extractNumbers,
   item,
+  locateOutput,
   missingOutput,
+  placementItem,
   openZip,
   summarize,
   withinTolerance,
@@ -25,7 +26,7 @@ async function supportedValues(inputsDir) {
     const q3 = series.slice(3, 6);
     const sum = (list) => list.reduce((total, value) => total + value, 0);
     for (const quarter of [q2, q3]) values.push(sum(quarter), sum(quarter) / 3);
-    values.push((sum(q3) / sum(q2) - 1) * 100);
+    values.push((sum(q3) / sum(q2) - 1) * 100, sum(q3) - sum(q2), (sum(q3) - sum(q2)) / 3);
     for (let index = 1; index < series.length; index += 1) {
       values.push(series[index] - series[index - 1], (series[index] / series[index - 1] - 1) * 100);
     }
@@ -36,14 +37,36 @@ async function supportedValues(inputsDir) {
   return values;
 }
 
+/** The monthly series in metrics.csv, one array per column. */
+async function metricSeries(inputsDir) {
+  const csv = await fs.readFile(path.join(inputsDir, "metrics.csv"), "utf8");
+  const [header, ...rows] = csv.trim().split("\n").map((line) => line.split(","));
+  return header.slice(1).map((_, index) => rows.map((row) => Number(row[index + 1])));
+}
+
+/**
+ * A chart drawn from plain shapes (presentation tools often draw bars as rectangles): at least 4
+ * text-free rectangles on a slide that also labels at least 4 values of one metrics.csv series.
+ */
+function isShapeChart(xml, numbers, series) {
+  const shapes = xml.match(/<p:sp>[\s\S]*?<\/p:sp>/g) || [];
+  const bars = shapes.filter((shape) => /prst="(rect|roundRect)"/.test(shape) && !/<a:t>/.test(shape)).length;
+  if (bars < 4) return false;
+  return series.some(
+    (values) =>
+      values.filter((value) => numbers.some((number) => withinTolerance(number, value, { relativeTolerance: 0.005 }))).length >= 4,
+  );
+}
+
 function isIgnorable(value) {
   // Slide numbers, small counts, quarters and years are not figures.
   return (Number.isInteger(value) && value >= 0 && value <= 12) || (value >= 2024 && value <= 2028);
 }
 
 export async function checkDeck({ workspace, job }) {
-  const file = path.join(workspace, job.output);
-  if (!(await exists(file))) return missingOutput(job.output);
+  const located = await locateOutput(workspace, job.output);
+  if (!located) return missingOutput(job.output);
+  const { file } = located;
   const { key } = job;
 
   let zip;
@@ -57,13 +80,20 @@ export async function checkDeck({ workspace, job }) {
     .sort((a, b) => Number(a.match(/\d+/)[0]) - Number(b.match(/\d+/)[0]));
   const chartFiles = Object.keys(zip.files).filter((name) => /^ppt\/charts\/chart\d+\.xml$/.test(name));
 
+  const series = await metricSeries(job.inputsDir);
   let pictures = 0;
-  const slideText = [];
+  let shapeCharts = 0;
+  const slides = [];
   for (const name of slideFiles) {
     const xml = await zip.file(name).async("string");
     pictures += (xml.match(/<p:pic[ >]/g) || []).length;
-    slideText.push(xmlTextRuns(xml, "a:t").join(" "));
+    const runs = xmlTextRuns(xml, "a:t");
+    const numbers = runs.flatMap((run) => extractNumbers(run));
+    if (isShapeChart(xml, numbers.map((entry) => entry.value), series)) shapeCharts += 1;
+    const text = runs.join(" ");
+    slides.push({ text, numbers, showsPercent: text.includes("%") });
   }
+  const slideText = slides.map((slide) => slide.text);
   const chartNumbers = [];
   for (const name of chartFiles) {
     const xml = await zip.file(name).async("string");
@@ -75,8 +105,11 @@ export async function checkDeck({ workspace, job }) {
 
   const textNumbers = slideText.flatMap((text) => extractNumbers(text));
   const keyFound = key.keyFigures.map((figure) => {
+    // A percentage may be written without its sign on a slide that labels its axis or title "%".
     const candidates = [
-      ...textNumbers.filter((entry) => !figure.percent || entry.percent).map((entry) => entry.value),
+      ...slides.flatMap((slide) =>
+        slide.numbers.filter((entry) => !figure.percent || entry.percent || slide.showsPercent),
+      ).map((entry) => entry.value),
       ...chartNumbers,
     ];
     const hit = candidates.find((value) => withinTolerance(value, figure.value, figure));
@@ -96,7 +129,7 @@ export async function checkDeck({ workspace, job }) {
     )
     .map((entry) => entry.raw);
 
-  const charts = chartFiles.length + pictures;
+  const charts = chartFiles.length + pictures + shapeCharts;
   const foundCount = keyFound.filter((entry) => entry.found).length;
   return summarize(
     [
@@ -109,7 +142,7 @@ export async function checkDeck({ workspace, job }) {
       item(
         `At least ${key.minCharts} charts`,
         charts >= key.minCharts,
-        `${chartFiles.length} native charts, ${pictures} pictures`,
+        `${chartFiles.length} native charts, ${shapeCharts} drawn from shapes, ${pictures} pictures`,
       ),
       item(
         `At least ${key.minKeyFigures} of ${key.keyFigures.length} key figures`,
@@ -122,10 +155,12 @@ export async function checkDeck({ workspace, job }) {
         unsupported.length ? unsupported.slice(0, 20).join(", ") : "none",
         { required: false },
       ),
+      placementItem(located, workspace),
     ],
     {
       slides: slideFiles.length,
       nativeCharts: chartFiles.length,
+      shapeCharts,
       pictures,
       keyFigures: foundCount,
       keyFiguresTotal: key.keyFigures.length,

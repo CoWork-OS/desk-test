@@ -3,7 +3,7 @@
 // change count as false positives.
 import path from "node:path";
 import ExcelJS from "exceljs";
-import { containsToken, exists, item, missingOutput, summarize } from "./common.mjs";
+import { containsToken, item, locateOutput, missingOutput, placementItem, summarize } from "./common.mjs";
 
 function cellText(cell) {
   const value = cell?.value;
@@ -46,8 +46,9 @@ export function matchScore(rowText, change) {
 }
 
 export async function checkContract({ workspace, job }) {
-  const file = path.join(workspace, job.output);
-  if (!(await exists(file))) return missingOutput(job.output);
+  const located = await locateOutput(workspace, job.output);
+  if (!located) return missingOutput(job.output);
+  const { file } = located;
   const { changes, maxFalsePositives } = job.key;
 
   const workbook = new ExcelJS.Workbook();
@@ -124,6 +125,7 @@ export async function checkContract({ workspace, job }) {
         `${highRiskFlagged.length}/${highRisk.length}`,
         { required: false },
       ),
+      placementItem(located, workspace),
     ],
     {
       changesFound: changes.length - missed.length,

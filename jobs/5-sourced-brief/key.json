@@ -75,28 +75,28 @@
       "id": "F4",
       "label": "£465,000 per electric bus",
       "patterns": [
-        "465(,000|\\s?k\\b|\\s?thousand)|0\\.465\\s?(m\\b|million)"
+        "(?<![\\d.])465(,000|\\s?k\\b|\\s?thousand)|(?<![\\d.])0\\.465\\s?(m\\b|million)"
       ]
     },
     {
       "id": "F5",
       "label": "£6.2 million grant",
       "patterns": [
-        "6\\.2\\s?(m\\b|mn\\b|million)|6,200,000"
+        "(?<![\\d.,])6\\.20?\\s?(m\\b|mn\\b|million)|(?<![\\d.,])6,200,000"
       ]
     },
     {
       "id": "F6",
       "label": "£3.8 million depot upgrade",
       "patterns": [
-        "3\\.8\\s?(m\\b|mn\\b|million)|3,800,000"
+        "(?<![\\d.,])3\\.80?\\s?(m\\b|mn\\b|million)|(?<![\\d.,])3,800,000"
       ]
     },
     {
       "id": "F7",
       "label": "£1.1 million yearly savings",
       "patterns": [
-        "1\\.1\\s?(m\\b|mn\\b|million)|1,100,000"
+        "(?<![\\d.,])1\\.10?\\s?(m\\b|mn\\b|million)|(?<![\\d.,])1,100,000"
       ]
     },
     {
