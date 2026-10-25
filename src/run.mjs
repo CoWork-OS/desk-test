@@ -235,12 +235,16 @@ async function runOnce(options, job, run, modelDir) {
 
   let receipt = null;
   if (taskId) {
-    const tail = coworkCommand(options, ["tail", taskId, "--limit", "20000", "--json"]);
-    const tailResult = await runProcess(tail.command, tail.args, { timeoutMs: 120_000 });
-    try {
-      receipt = buildReceipt(parseTail(tailResult.stdout), { watchFor: watchListFor(job) });
-    } catch (error) {
-      receipt = { error: String(error.message || error) };
+    // Right after a run the task's events can still be settling, so read them twice if needed.
+    for (let attempt = 1; attempt <= 2 && !(receipt && !receipt.error); attempt += 1) {
+      if (attempt > 1) await new Promise((resolve) => setTimeout(resolve, 10_000));
+      const tail = coworkCommand(options, ["tail", taskId, "--limit", "20000", "--json"]);
+      const tailResult = await runProcess(tail.command, tail.args, { timeoutMs: 120_000 });
+      try {
+        receipt = buildReceipt(parseTail(tailResult.stdout), { watchFor: watchListFor(job) });
+      } catch (error) {
+        receipt = { error: String(error.message || error) };
+      }
     }
   }
 

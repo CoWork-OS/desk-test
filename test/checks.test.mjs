@@ -97,6 +97,31 @@ describe("job 1: board deck", () => {
     assert.match(itemNamed(result, "At least 4 of 5").detail, /found: September gross margin/);
   });
 
+  it("reads charts and figures written in millions", async () => {
+    const workspace = await workspaceFor("deck-millions");
+    const job = await loadJob("1-board-deck");
+    const pptx = new PptxGenJS();
+    const series = {
+      "Revenue (USD millions)": [1.212, 1.305, 1.388, 1.472, 1.596, 1.752],
+      "End-of-month cash (USD millions)": [6.94, 6.78, 6.61, 6.45, 6.31, 6.19],
+      "CAC (USD)": [506, 496, 480],
+    };
+    for (const [title, values] of Object.entries(series)) {
+      const slide = pptx.addSlide();
+      values.forEach((value, index) => {
+        slide.addShape(pptx.ShapeType.rect, { x: 1 + index * 1.2, y: 3, w: 0.8, h: 2, fill: { color: "E38B3F" } });
+        slide.addText(String(value), { x: 1 + index * 1.2, y: 2.6, w: 0.8, h: 0.3, fontSize: 9 });
+      });
+      slide.addText(title, { x: 1, y: 5.2, w: 4, h: 0.3, fontSize: 9 });
+    }
+    for (let index = 0; index < 7; index += 1) pptx.addSlide().addText(`Slide ${index + 4}`, { x: 0.5, y: 0.5, w: 9, h: 1 });
+    await pptx.writeFile({ fileName: path.join(workspace, job.output) });
+    const result = await CHECKS[job.id]({ workspace, job });
+    assert.equal(result.metrics.shapeCharts, 3);
+    assert.match(itemNamed(result, "At least 4 of 5").detail, /found: Cash at end of September/);
+    assert.equal(result.metrics.unsupportedNumbers, 0, itemNamed(result, "Numbers not traced").detail);
+  });
+
   it("finds an output saved in a subfolder and reports where", async () => {
     const workspace = await workspaceFor("deck-misplaced");
     const job = await loadJob("1-board-deck");
@@ -144,6 +169,22 @@ describe("job 2: contract changes", () => {
     assert.equal(result.metrics.changesFound, 12);
     assert.equal(result.metrics.falsePositives, 0);
     assert.equal(result.metrics.highRiskFlagged, result.metrics.highRiskTotal);
+  });
+
+  it("counts a change split over several rows as a split, not a made-up change", async () => {
+    const workspace = await workspaceFor("contract-split");
+    const job = await loadJob("2-contract-changes");
+    const rows = answerKey().map((change) => {
+      const clause = clauseText(change.section);
+      return [change.section, change.summary, clause.v1, clause.v2, change.risk];
+    });
+    rows.push(["4.6", "Removes the 3% yearly cap on fee increases", "will not exceed 3%", "", "High"]);
+    rows.push(["13.1", "Courts move from London to Dublin", "courts of London", "courts of Dublin", "Medium"]);
+    await sheet(path.join(workspace, job.output), rows);
+    const result = await CHECKS[job.id]({ workspace, job });
+    assert.equal(result.passed, true, JSON.stringify(result.items, null, 2));
+    assert.equal(result.metrics.falsePositives, 0);
+    assert.equal(result.metrics.splitRows, 2);
   });
 
   it("names the missed changes and counts rows that match nothing", async () => {
@@ -324,6 +365,22 @@ describe("job 5: sourced brief", () => {
     assert.equal(result.passed, true, JSON.stringify(result.items, null, 2));
     assert.equal(result.metrics.facts, 8);
     assert.equal(result.metrics.citedPages, 4);
+  });
+
+  it("does not flag the corrected grant figure when the brief says it was corrected", async () => {
+    const workspace = await workspaceFor("brief-corrected");
+    const job = await loadJob("5-sourced-brief");
+    await pdf(path.join(workspace, job.output), [...goodLines(job), "The Gazette corrected its earlier \u00A39m grant figure."]);
+    const result = await CHECKS[job.id]({ workspace, job, receipt: { watched: [] } });
+    assert.equal(result.metrics.repeatsWrongClaim, false);
+  });
+
+  it("flags the £9 million grant stated as fact", async () => {
+    const workspace = await workspaceFor("brief-wrong-claim");
+    const job = await loadJob("5-sourced-brief");
+    await pdf(path.join(workspace, job.output), [...goodLines(job), "Residents say the grant is \u00A39 million."]);
+    const result = await CHECKS[job.id]({ workspace, job, receipt: { watched: [] } });
+    assert.equal(result.metrics.repeatsWrongClaim, true);
   });
 
   it("reads a URL broken across lines at a hyphen as the real URL", async () => {

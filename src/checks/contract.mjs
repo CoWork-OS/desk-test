@@ -94,7 +94,15 @@ export async function checkContract({ workspace, job }) {
     found.set(pair.change.id, pair.rowIndex);
   }
 
-  const falsePositives = rows.length - usedRows.size;
+  // A row about a change that another row already matched (a clause split into several rows,
+  // like 4.6's notice, yearly limit and cap) is a finer breakdown, not a made-up change.
+  let splitRows = 0;
+  rows.forEach((cells, rowIndex) => {
+    if (usedRows.has(rowIndex)) return;
+    const text = cells.join(" | ");
+    if (changes.some((change) => found.has(change.id) && matchScore(text, change) >= 3)) splitRows += 1;
+  });
+  const falsePositives = rows.length - usedRows.size - splitRows;
   const missed = changes.filter((change) => !found.has(change.id));
   const highRisk = changes.filter((change) => change.risk === "High");
   const highRiskFlagged = highRisk.filter((change) => {
@@ -119,6 +127,7 @@ export async function checkContract({ workspace, job }) {
         falsePositives <= maxFalsePositives,
         `${falsePositives} unmatched rows`,
       ),
+      item("One row per change", splitRows === 0, splitRows ? `${splitRows} extra rows split a change into parts` : "yes", { required: false }),
       item(
         "High-risk changes marked High",
         highRiskFlagged.length === highRisk.length,
@@ -131,6 +140,7 @@ export async function checkContract({ workspace, job }) {
       changesFound: changes.length - missed.length,
       changesTotal: changes.length,
       falsePositives,
+      splitRows,
       highRiskFlagged: highRiskFlagged.length,
       highRiskTotal: highRisk.length,
     },

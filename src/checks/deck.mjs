@@ -45,17 +45,26 @@ async function metricSeries(inputsDir) {
 }
 
 /**
- * A chart drawn from plain shapes (presentation tools often draw bars as rectangles): at least 4
- * text-free rectangles on a slide that also labels at least 4 values of one metrics.csv series.
+ * A chart drawn from plain shapes (presentation tools often draw bars as rectangles): at least 3
+ * text-free rectangles on a slide that also labels at least 3 values of one metrics.csv series,
+ * written in full or in thousands or millions.
  */
 function isShapeChart(xml, numbers, series) {
   const shapes = xml.match(/<p:sp>[\s\S]*?<\/p:sp>/g) || [];
   const bars = shapes.filter((shape) => /prst="(rect|roundRect)"/.test(shape) && !/<a:t>/.test(shape)).length;
-  if (bars < 4) return false;
+  if (bars < 3) return false;
+  const scaled = numbers.flatMap((number) => [number, number * 1e3, number * 1e6]);
   return series.some(
     (values) =>
-      values.filter((value) => numbers.some((number) => withinTolerance(number, value, { relativeTolerance: 0.005 }))).length >= 4,
+      values.filter((value) => scaled.some((number) => withinTolerance(number, value, { relativeTolerance: 0.005 }))).length >= 3,
   );
+}
+
+/** A slide that labels its figures "USD millions", "$M" or "(k)" states them at that scale. */
+function slideScale(text) {
+  if (/\bmillions?\b|\(\s*(usd|\$|£|€)?\s*m\s*\)|\$\s?m\b|usd\s?m\b/i.test(text)) return 1e6;
+  if (/\bthousands?\b|\(\s*(usd|\$|£|€)?\s*k\s*\)|\$\s?k\b/i.test(text)) return 1e3;
+  return 1;
 }
 
 function isIgnorable(value) {
@@ -91,6 +100,13 @@ export async function checkDeck({ workspace, job }) {
     const numbers = runs.flatMap((run) => extractNumbers(run));
     if (isShapeChart(xml, numbers.map((entry) => entry.value), series)) shapeCharts += 1;
     const text = runs.join(" ");
+    const scale = slideScale(text);
+    // Plain numbers on a slide stated in millions also count at full value.
+    if (scale > 1) {
+      for (const entry of [...numbers]) {
+        if (!entry.percent && entry.value < 1e4) numbers.push({ ...entry, value: entry.value * scale, scaled: true });
+      }
+    }
     slides.push({ text, numbers, showsPercent: text.includes("%") });
   }
   const slideText = slides.map((slide) => slide.text);
@@ -103,7 +119,7 @@ export async function checkDeck({ workspace, job }) {
     }
   }
 
-  const textNumbers = slideText.flatMap((text) => extractNumbers(text));
+  const textNumbers = slides.flatMap((slide) => slide.numbers);
   const keyFound = key.keyFigures.map((figure) => {
     // A percentage may be written without its sign on a slide that labels its axis or title "%".
     const candidates = [
@@ -117,17 +133,16 @@ export async function checkDeck({ workspace, job }) {
   });
 
   const supported = await supportedValues(job.inputsDir);
-  const unsupported = textNumbers
-    .filter((entry) => !isIgnorable(entry.value))
-    .filter(
-      (entry) =>
-        !supported.some(
-          (value) =>
-            withinTolerance(entry.value, value, { relativeTolerance: 0.011 }) ||
-            (entry.percent && Math.abs(entry.value - value) <= 0.5),
-        ),
-    )
-    .map((entry) => entry.raw);
+  // A number counts as traced when it, or its value at the slide's stated scale, is supported.
+  const isSupported = (entry) =>
+    isIgnorable(entry.value) ||
+    supported.some(
+      (value) =>
+        withinTolerance(entry.value, value, { relativeTolerance: 0.011 }) ||
+        (entry.percent && Math.abs(entry.value - value) <= 0.5),
+    );
+  const traced = new Set(textNumbers.filter(isSupported).map((entry) => entry.raw));
+  const unsupported = [...new Set(textNumbers.map((entry) => entry.raw))].filter((raw) => !traced.has(raw));
 
   const charts = chartFiles.length + pictures + shapeCharts;
   const foundCount = keyFound.filter((entry) => entry.found).length;
