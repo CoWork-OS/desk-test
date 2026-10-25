@@ -1,0 +1,243 @@
+{
+  "changes": [
+    {
+      "section": "2.1",
+      "id": 1,
+      "summary": "Initial term 24 months to 36 months",
+      "risk": "Medium",
+      "old": [
+        "24 months",
+        "24-month",
+        "24"
+      ],
+      "new": [
+        "36 months",
+        "36-month",
+        "36"
+      ],
+      "keywords": [
+        "initial term"
+      ]
+    },
+    {
+      "section": "2.3",
+      "id": 2,
+      "summary": "Notice to stop auto-renewal 90 days to 30 days",
+      "risk": "High",
+      "old": [
+        "90 days",
+        "90-day",
+        "90"
+      ],
+      "new": [
+        "30 days",
+        "30-day",
+        "30"
+      ],
+      "keywords": [
+        "renewal",
+        "renew"
+      ]
+    },
+    {
+      "section": "4.2",
+      "id": 3,
+      "summary": "Payment terms 45 days to 30 days",
+      "risk": "Medium",
+      "old": [
+        "45 days",
+        "45-day",
+        "45"
+      ],
+      "new": [
+        "30 days",
+        "30-day",
+        "30"
+      ],
+      "keywords": [
+        "payment",
+        "invoice"
+      ]
+    },
+    {
+      "section": "4.4",
+      "id": 4,
+      "summary": "Late-payment interest 1.0% to 1.5% per month",
+      "risk": "Low",
+      "old": [
+        "1.0%",
+        "1%"
+      ],
+      "new": [
+        "1.5%"
+      ],
+      "keywords": [
+        "interest",
+        "overdue",
+        "late"
+      ]
+    },
+    {
+      "section": "4.6",
+      "id": 5,
+      "summary": "Fee increases: 90 days' notice and 3% yearly cap replaced by 30 days' notice and no cap",
+      "risk": "High",
+      "old": [
+        "90 days",
+        "3%",
+        "once per contract year"
+      ],
+      "new": [
+        "30 days",
+        "no cap",
+        "uncapped",
+        "removed",
+        "no limit",
+        "no longer capped"
+      ],
+      "keywords": [
+        "increase",
+        "price",
+        "fee"
+      ]
+    },
+    {
+      "section": "6.1",
+      "id": 6,
+      "summary": "Availability 99.9% to 99.5%",
+      "risk": "Medium",
+      "old": [
+        "99.9%",
+        "99.9"
+      ],
+      "new": [
+        "99.5%",
+        "99.5"
+      ],
+      "keywords": [
+        "availability",
+        "uptime",
+        "service level"
+      ]
+    },
+    {
+      "section": "6.3",
+      "id": 7,
+      "summary": "Service credit 10% to 5% of the monthly fee",
+      "risk": "Medium",
+      "old": [
+        "10%"
+      ],
+      "new": [
+        "5%"
+      ],
+      "keywords": [
+        "service credit",
+        "credit"
+      ]
+    },
+    {
+      "section": "8.2",
+      "id": 8,
+      "summary": "Data export window after termination 60 days to 15 days",
+      "risk": "High",
+      "old": [
+        "60 days",
+        "60-day",
+        "60"
+      ],
+      "new": [
+        "15 days",
+        "15-day",
+        "15"
+      ],
+      "keywords": [
+        "export",
+        "delete",
+        "deletion"
+      ]
+    },
+    {
+      "section": "9.3",
+      "id": 9,
+      "summary": "Subprocessor notice changes from shall (required) to may (optional)",
+      "risk": "High",
+      "old": [
+        "shall",
+        "must",
+        "required",
+        "obligation",
+        "mandatory"
+      ],
+      "new": [
+        "may",
+        "optional",
+        "discretion",
+        "discretionary"
+      ],
+      "keywords": [
+        "subprocessor",
+        "sub-processor"
+      ]
+    },
+    {
+      "section": "11.2",
+      "id": 10,
+      "summary": "Liability cap: fees from the last 12 months to the last 6 months",
+      "risk": "High",
+      "old": [
+        "12 months",
+        "12-month",
+        "12"
+      ],
+      "new": [
+        "6 months",
+        "6-month",
+        "six months"
+      ],
+      "keywords": [
+        "liability",
+        "cap"
+      ]
+    },
+    {
+      "section": "13.1",
+      "id": 11,
+      "summary": "Governing law England and Wales (London courts) to Ireland (Dublin courts)",
+      "risk": "Medium",
+      "old": [
+        "England",
+        "Wales",
+        "London"
+      ],
+      "new": [
+        "Ireland",
+        "Dublin",
+        "Irish"
+      ],
+      "keywords": [
+        "governing law",
+        "jurisdiction"
+      ]
+    },
+    {
+      "section": "14.4",
+      "id": 12,
+      "summary": "Provider may now assign to an affiliate or successor without consent",
+      "risk": "Medium",
+      "old": [
+        "consent"
+      ],
+      "new": [
+        "affiliate",
+        "successor"
+      ],
+      "keywords": [
+        "assign",
+        "assignment",
+        "transfer"
+      ]
+    }
+  ],
+  "maxFalsePositives": 2
+}

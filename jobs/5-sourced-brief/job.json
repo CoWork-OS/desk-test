@@ -1,0 +1,7 @@
+{
+  "id": "5-sourced-brief",
+  "title": "Sourced brief from saved web pages",
+  "prompt": "Using only the saved web pages in the snapshot folder, write a one-page brief for Marrowby council's finance committee on the electric bus plan: costs, funding, timeline and risks. Cite the canonical URL of the page each claim comes from, and list every URL you cite in a Sources section at the end. Save it as marrowby-ebus-brief.pdf in this folder.",
+  "output": "marrowby-ebus-brief.pdf",
+  "timeoutMinutes": 20
+}

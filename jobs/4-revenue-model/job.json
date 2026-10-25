@@ -1,0 +1,7 @@
+{
+  "id": "4-revenue-model",
+  "title": "3-year revenue model with live formulas",
+  "prompt": "Build the 3-year revenue model described in assumptions.md, using the plans in pricing.csv. Follow the workbook layout in assumptions.md exactly, and calculate every number on the Model and Summary sheets with a formula. Save it as revenue-model.xlsx in this folder.",
+  "output": "revenue-model.xlsx",
+  "timeoutMinutes": 25
+}

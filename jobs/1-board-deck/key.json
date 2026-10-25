@@ -1,0 +1,12 @@
+{
+  "slides": { "min": 8, "max": 12 },
+  "minCharts": 3,
+  "keyFigures": [
+    { "label": "Q3 revenue", "value": 4820000, "relativeTolerance": 0.01 },
+    { "label": "Revenue growth vs Q2", "value": 23.43, "percent": true, "absoluteTolerance": 0.5 },
+    { "label": "September gross margin", "value": 40.9, "percent": true, "absoluteTolerance": 0.05 },
+    { "label": "Cash at end of September", "value": 6190000, "relativeTolerance": 0.01 },
+    { "label": "Q3 units sold", "value": 1558, "relativeTolerance": 0.001 }
+  ],
+  "minKeyFigures": 4
+}

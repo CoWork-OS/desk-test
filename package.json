@@ -1,0 +1,29 @@
+{
+  "name": "desk-test",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Five real office jobs, every model, real files. The CoWork OS Desk Test.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "fixtures": "node src/fixtures/build.mjs",
+    "desk-test": "node src/run.mjs",
+    "check": "node src/check.mjs",
+    "report": "node src/report.mjs",
+    "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "docx": "^9.14.0",
+    "exceljs": "^4.4.0",
+    "fast-formula-parser": "^1.0.19",
+    "jszip": "^3.10.2",
+    "pdfjs-dist": "^6.4.299"
+  },
+  "devDependencies": {
+    "pdf-lib": "^1.17.1",
+    "pptxgenjs": "^4.0.1"
+  }
+}

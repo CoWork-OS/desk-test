@@ -1,0 +1,11 @@
+{
+  "reference": "src/checks/revenue-reference.mjs",
+  "relativeTolerance": 0.01,
+  "baseYearTotals": [1897791, 3374979, 5178704],
+  "perturbation": {
+    "Business price": 399,
+    "Team monthly churn": 0.06,
+    "New customer monthly growth": 0.04
+  },
+  "perturbedYearTotals": [1986512, 3788751, 6724211]
+}

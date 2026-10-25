@@ -1,0 +1,6 @@
+node_modules/
+results/*
+!results/.gitkeep
+!results/published/
+!results/community/
+.DS_Store

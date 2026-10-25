@@ -1,0 +1,4 @@
+plan,price_per_month_usd,starting_customers,new_customers_month_1,monthly_churn
+Starter,29,1200,140,0.035
+Team,99,420,45,0.02
+Business,299,85,8,0.012

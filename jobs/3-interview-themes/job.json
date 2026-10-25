@@ -1,0 +1,7 @@
+{
+  "id": "3-interview-themes",
+  "title": "Themes and quotes from 12 interviews",
+  "prompt": "Summarize the 12 customer interviews in the interviews folder into their main themes. For each theme, give a short explanation and at least two quotes copied word for word from different interviews, each followed by its interview number in the form (Interview 07). Keep it to two pages. Save it as interview-themes.docx in this folder.",
+  "output": "interview-themes.docx",
+  "timeoutMinutes": 20
+}

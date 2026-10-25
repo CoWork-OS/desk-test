@@ -1,0 +1,26 @@
+{
+  "note": "First-edition model list. OpenRouter ids come from CoWork's model catalog snapshot of 2026-10-12; confirm each id on openrouter.ai/models before a run. Local model tags are whatever you pulled in Ollama or LM Studio.",
+  "models": [
+    { "group": "frontier", "label": "Claude Opus 5.5", "provider": "openrouter", "model": "anthropic/claude-opus-5.5" },
+    { "group": "frontier", "label": "Claude Sonnet 5.5", "provider": "openrouter", "model": "anthropic/claude-sonnet-5.5" },
+    { "group": "frontier", "label": "Claude Fable 5.1", "provider": "openrouter", "model": "anthropic/claude-fable-5.1" },
+    { "group": "frontier", "label": "GPT-6.1 Sol", "provider": "openrouter", "model": "openai/gpt-6.1-sol" },
+    { "group": "frontier", "label": "GPT-6 Astra", "provider": "openrouter", "model": "openai/gpt-6-astra" },
+    { "group": "frontier", "label": "Gemini 4 Argon", "provider": "openrouter", "model": "google/gemini-4-argon" },
+    { "group": "frontier", "label": "Grok 4.7", "provider": "openrouter", "model": "x-ai/grok-4.7" },
+    { "group": "fast", "label": "Claude Haiku 5.5", "provider": "openrouter", "model": "anthropic/claude-haiku-5.5" },
+    { "group": "fast", "label": "GPT-6 Luna", "provider": "openrouter", "model": "openai/gpt-6-luna" },
+    { "group": "fast", "label": "Gemini 3.8 Flash", "provider": "openrouter", "model": "google/gemini-3.8-flash" },
+    { "group": "open", "label": "DeepSeek V4 Pro", "provider": "openrouter", "model": "deepseek/deepseek-v4-pro" },
+    { "group": "open", "label": "Kimi K3", "provider": "openrouter", "model": "moonshotai/kimi-k3" },
+    { "group": "open", "label": "GLM-5.3", "provider": "openrouter", "model": "z-ai/glm-5.3" },
+    { "group": "open", "label": "Qwen 3.8 Max", "provider": "openrouter", "model": "qwen/qwen3.8-max-0902" },
+    { "group": "open", "label": "MiniMax M3", "provider": "openrouter", "model": "minimax/minimax-m3" },
+    { "group": "open", "label": "Mistral Large 4", "provider": "openrouter", "model": "mistralai/mistral-large-4-0" },
+    { "group": "open", "label": "Muse Spark Open", "provider": "openrouter", "model": "meta/muse-spark-open" },
+    { "group": "open", "label": "MiMo V2.6 Pro", "provider": "openrouter", "model": "xiaomi/mimo-v2.6-pro" },
+    { "group": "local", "label": "Gemma 4 31B (local)", "provider": "ollama", "model": "gemma4:31b" },
+    { "group": "local", "label": "Qwen3.6 27B (local)", "provider": "ollama", "model": "qwen3.6:27b" },
+    { "group": "local", "label": "gpt-oss 20B (local)", "provider": "ollama", "model": "gpt-oss:20b" }
+  ]
+}

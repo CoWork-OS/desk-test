@@ -1,0 +1,7 @@
+{
+  "id": "1-board-deck",
+  "title": "Board deck from notes and metrics",
+  "prompt": "Use q3-notes.md and metrics.csv in this folder to make a 10-slide deck for Hollin Valley Cargo Bikes' Q3 2026 board meeting. Include at least three charts built from metrics.csv. Use only figures from these two files or figures calculated from them. Save it as q3-board-deck.pptx in this folder.",
+  "output": "q3-board-deck.pptx",
+  "timeoutMinutes": 25
+}

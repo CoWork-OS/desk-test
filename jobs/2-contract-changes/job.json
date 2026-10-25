@@ -1,0 +1,7 @@
+{
+  "id": "2-contract-changes",
+  "title": "Every change between two contract drafts",
+  "prompt": "msa-v1.docx and msa-v2.docx in this folder are two drafts of the same services agreement. List every change from v1 to v2 in a spreadsheet with the columns Section, Change, Old text, New text and Risk. Risk is High, Medium or Low from the customer's point of view. Use one row per change. Save it as contract-changes.xlsx in this folder.",
+  "output": "contract-changes.xlsx",
+  "timeoutMinutes": 20
+}
