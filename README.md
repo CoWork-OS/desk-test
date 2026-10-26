@@ -88,6 +88,7 @@ The receipt in `run.json` holds the time, tokens, cost, tool calls and every ref
 
 - `npm run check -- results/<model folder>` grades saved results again, without calling the model (useful after a check changes).
 - `npm run report` combines every model's summary into `results/report.json` and `results/report.csv`.
+- `npm run export -- results/<edition> --config <edition>.json --files <site>/public/desk-test/<edition> --url /desk-test/<edition> --data <site>/src/data/desk-test-<edition>.json` writes each model's median-run files, preview images and the page data for the results page. It needs LibreOffice (`soffice`), poppler (`pdftoppm`) and ImageMagick (`magick`).
 
 ## Share your results
 
